@@ -123,6 +123,24 @@
   .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 
   .skeleton{opacity:.5}
+
+  /* filter bar */
+  .filterbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:13px 16px;margin-bottom:22px;box-shadow:var(--shadow)}
+  .flabel{font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted2);font-weight:700}
+  .fpreset{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .chip{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,0.04);color:var(--muted);font-weight:700;font-size:12.5px;padding:7px 13px;border-radius:999px;transition:.15s;font-family:'Inter'}
+  .chip:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+  .chip.active{background:linear-gradient(145deg,var(--gold),#b8860b);color:#1a1206;border-color:transparent}
+  .fdates{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+  .fdates label{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+  input[type=date]{background:rgba(255,255,255,0.05);border:1px solid var(--line);border-radius:9px;color:var(--text);font-family:'Inter';font-size:12.5px;font-weight:600;padding:7px 10px;color-scheme:dark}
+  input[type=date]:focus{outline:none;border-color:var(--gold)}
+  .fcount{font-size:12px;color:var(--gold2);font-weight:700;font-family:'Sora';white-space:nowrap}
+  th.sortable{cursor:pointer;user-select:none;transition:.12s}
+  th.sortable:hover{color:var(--text)}
+  th .arrow{font-size:9px;margin-left:4px;color:var(--gold2)}
+  th.sortON{color:var(--gold2)}
+
   @media(max-width:1080px){
     .kpis{grid-template-columns:repeat(2,1fr)}
     .g-2,.g-2b,.g-3{grid-template-columns:1fr}
@@ -157,6 +175,23 @@
   </header>
 
   <div class="errbanner" id="errBanner"></div>
+
+  <!-- FILTER BAR -->
+  <div class="filterbar">
+    <span class="flabel">Date range</span>
+    <div class="fpreset" id="presets">
+      <button class="chip active" data-preset="all">All time</button>
+      <button class="chip" data-preset="7">Last 7 days</button>
+      <button class="chip" data-preset="30">Last 30 days</button>
+      <button class="chip" data-preset="thismonth">This month</button>
+      <button class="chip" data-preset="lastmonth">Last month</button>
+    </div>
+    <div class="fdates">
+      <label>From <input type="date" id="fFrom" /></label>
+      <label>To <input type="date" id="fTo" /></label>
+      <span class="fcount" id="fCount"></span>
+    </div>
+  </div>
 
   <!-- HERO KPIS -->
   <div class="kpis">
@@ -204,7 +239,7 @@
   <div class="sec-title"><span class="bar"></span><h2>Deal Ledger</h2><span class="hint">Every close ranked by cash collected</span></div>
   <div class="panel">
     <table id="dealsTable">
-      <thead><tr><th>#</th><th>Prospect</th><th>Closer</th><th>Setter</th><th>Product</th><th>Method</th><th>Status</th><th style="text-align:right">Cash</th></tr></thead>
+      <thead><tr><th>#</th><th>Prospect</th><th>Closer</th><th>Setter</th><th>Product</th><th>Method</th><th>Status</th><th class="sortable" data-sort="date">Date <span class="arrow"></span></th><th class="sortable" style="text-align:right" data-sort="cash">Cash <span class="arrow"></span></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -352,14 +387,63 @@ function setStatus(state,text){
   document.getElementById("liveText").textContent=text;
 }
 
+/* ================= STATE ================= */
+let RAW=null;
+let FILTER={preset:"all", from:null, to:null};
+let SORT={key:"cash", dir:"desc"};
+let currentDeals=[];
+const dataBounds={min:null, max:null};
+
+const startOfDay=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const endOfDay=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999);
+const isoOf=d=>d?d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"):"";
+const parseInput=s=>{const p=String(s).split("-");return p.length===3&&p[0]?new Date(+p[0],+p[1]-1,+p[2]):null;};
+
+function resolveRange(){
+  const {min,max}=dataBounds, p=FILTER.preset;
+  if(p==="custom") return {from:FILTER.from?startOfDay(FILTER.from):null, to:FILTER.to?endOfDay(FILTER.to):null};
+  if(p==="all"||!min||!max) return {from:null, to:null};
+  const anchor=new Date(Math.max(max.getTime(), Date.now()));
+  if(p==="7"||p==="30"){const days=+p;return {from:startOfDay(new Date(anchor.getTime()-(days-1)*864e5)), to:endOfDay(anchor)};}
+  if(p==="thismonth") return {from:new Date(anchor.getFullYear(),anchor.getMonth(),1), to:endOfDay(anchor)};
+  if(p==="lastmonth") return {from:new Date(anchor.getFullYear(),anchor.getMonth()-1,1), to:endOfDay(new Date(anchor.getFullYear(),anchor.getMonth(),0))};
+  return {from:null, to:null};
+}
+
+function buildModel(){
+  const deals=RAW.closedRaw
+    .filter(r=>(r["Prospect name"]||"").trim()!=="" && num(r["Cash Collected amount (USD)"])>0)
+    .map(r=>({date:parseDMY(r["Timestamp"]), n:r["Prospect name"], closer:(r["Closer"]||"").trim()||"No Closer", setter:(r["Setter"]||"").trim()||"-", prod:normProduct(r["Product or package sold"]||""), method:payBucket(r["Payment method"]||""), status:/deposit/i.test(r["Payment status"]||"")?"Deposit":"Paid in full", cash:num(r["Cash Collected amount (USD)"])}));
+  const sRows=RAW.setterRaw
+    .filter(r=>(r["Name"]||"").trim()!=="")
+    .map(r=>({date:parseDMY(r["Timestamp"]), newConv:num(r["New Conversations today"]), pitchCourse:num(r["Pitched Course"]), pitchCalls:num(r["Pitched Calls"]), booked:num(r["Booked Calls"]), dmsDeals:num(r["Deals Closed in DMS"]), closerDeals:num(r["Deals closed (With Closer)"]), quality:numOrNull(r["Quality of Leads"]), interest:numOrNull(r["How interested are leads"]), objection:r["Common objection"]||"", source:r["Where did majority of leads come from?"]||""}))
+    .sort((a,b)=>(a.date?.getTime()||0)-(b.date?.getTime()||0));
+  return {deals,sRows};
+}
+
+function applyAndRender(){
+  if(!RAW) return;
+  const model=buildModel();
+  const allDates=[...model.deals.map(d=>d.date), ...model.sRows.map(r=>r.date)].filter(Boolean).sort((a,b)=>a-b);
+  dataBounds.min=allDates[0]||null;
+  dataBounds.max=allDates.length?allDates[allDates.length-1]:null;
+  const fFrom=document.getElementById("fFrom"), fTo=document.getElementById("fTo");
+  if(dataBounds.min){fFrom.min=fTo.min=isoOf(dataBounds.min); fFrom.max=fTo.max=isoOf(dataBounds.max);}
+  const range=resolveRange();
+  if(FILTER.preset!=="custom"){fFrom.value=isoOf(range.from||dataBounds.min); fTo.value=isoOf(range.to||dataBounds.max);}
+  const inRange=d=>d&&(!range.from||d>=range.from)&&(!range.to||d<=range.to);
+  renderModel(model.deals.filter(d=>inRange(d.date)), model.sRows.filter(r=>inRange(r.date)), range);
+}
+
 async function load(manual){
   const btn=document.getElementById("refreshBtn"); btn.classList.add("spin");
   try{
     const [closedRaw, setterRaw] = await Promise.all([fetchSheet(SHEETS.closed), fetchSheet(SHEETS.setter)]);
-    render(closedRaw, setterRaw);
+    RAW={closedRaw, setterRaw};
+    applyAndRender();
     document.getElementById("errBanner").style.display="none";
     const now=new Date();
-    setStatus("live","Live &middot; updated "+now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+    setStatus("live","");
     document.getElementById("liveText").innerHTML="Live &middot; updated "+now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
   }catch(e){
     setStatus("err","Connection issue");
@@ -372,54 +456,18 @@ async function load(manual){
   }
 }
 
-function render(closedRaw, setterRaw){
-  /* ---- DEALS ---- */
-  const deals = closedRaw
-    .filter(r => (r["Prospect name"]||"").trim() !== "" && num(r["Cash Collected amount (USD)"])>0)
-    .map(r=>({
-      date: parseDMY(r["Timestamp"]),
-      n: r["Prospect name"],
-      closer: (r["Closer"]||"").trim() || "No Closer",
-      setter: (r["Setter"]||"").trim() || "-",
-      prod: normProduct(r["Product or package sold"]||""),
-      method: payBucket(r["Payment method"]||""),
-      status: /deposit/i.test(r["Payment status"]||"") ? "Deposit" : "Paid in full",
-      cash: num(r["Cash Collected amount (USD)"]),
-    }))
-    .sort((a,b)=>b.cash-a.cash);
-
+function renderModel(deals, sRows, range){
   const totalCash = deals.reduce((s,d)=>s+d.cash,0);
   const dealCount = deals.length;
   const avgDeal = dealCount? totalCash/dealCount : 0;
-  const top = deals[0] || {cash:0,prod:"",closer:""};
-
-  /* ---- SETTER ROWS ---- */
-  const sRows = setterRaw
-    .filter(r => (r["Name"]||"").trim()!=="")
-    .map(r=>({
-      date: parseDMY(r["Timestamp"]),
-      newConv: num(r["New Conversations today"]),
-      pitchCourse: num(r["Pitched Course"]),
-      pitchCalls: num(r["Pitched Calls"]),
-      booked: num(r["Booked Calls"]),
-      dmsDeals: num(r["Deals Closed in DMS"]),
-      closerDeals: num(r["Deals closed (With Closer)"]),
-      quality: numOrNull(r["Quality of Leads"]),
-      interest: numOrNull(r["How interested are leads"]),
-      objection: r["Common objection"]||"",
-      source: r["Where did majority of leads come from?"]||"",
-    }))
-    .sort((a,b)=>(a.date?.getTime()||0)-(b.date?.getTime()||0));
-
+  const top = deals.reduce((m,d)=>d.cash>(m?.cash||0)?d:m, null) || {cash:0,prod:"",closer:""};
   const totalNewConv = sRows.reduce((s,r)=>s+r.newConv,0);
   const cashPerConv = totalNewConv? totalCash/totalNewConv : 0;
 
-  /* ---- DATE WINDOW ---- */
-  const allDates=[...deals.map(d=>d.date), ...sRows.map(r=>r.date)].filter(Boolean).sort((a,b)=>a-b);
-  if(allDates.length){
-    const a=allDates[0], b=allDates[allDates.length-1];
-    document.getElementById("windowLabel").textContent = dayLabel(a)+" to "+dayLabel(b)+" "+b.getFullYear();
-  }
+  /* ---- DATE WINDOW LABEL + IN-RANGE COUNT ---- */
+  const wFrom = range.from || dataBounds.min, wTo = range.to || dataBounds.max;
+  document.getElementById("windowLabel").textContent = (wFrom&&wTo) ? dayLabel(wFrom)+" to "+dayLabel(wTo)+" "+wTo.getFullYear() : "No data in range";
+  document.getElementById("fCount").textContent = dealCount+" deals · "+fmt(totalCash);
 
   /* ---- KPIs ---- */
   document.getElementById("kpiCash").textContent=fmt(totalCash);
@@ -486,12 +534,8 @@ function render(closedRaw, setterRaw){
       scales:{x:{grid:{color:grid},ticks:{callback:v=>fmtK(v)}},y:{grid:{display:false}}}}});
 
   /* ---- DEALS TABLE ---- */
-  const mCls=m=>m==="WHOP"?"whop":"other", sCls=s=>s==="Deposit"?"dep":"full";
-  document.querySelector("#dealsTable tbody").innerHTML=deals.map((d,i)=>`
-    <tr><td class="tag">${i+1}</td><td><b>${d.n}</b></td><td>${niceName(d.closer)}</td><td>${d.setter}</td>
-    <td>${d.prod}</td><td><span class="pill ${mCls(d.method)}">${d.method}</span></td>
-    <td><span class="pill ${sCls(d.status)}">${d.status}</span></td>
-    <td style="text-align:right" class="cash">${fmt(d.cash)}</td></tr>`).join("");
+  currentDeals = deals;
+  renderDealsTable();
 
   /* ---- FUNNEL ---- */
   const sum=k=>sRows.reduce((s,r)=>s+r[k],0);
@@ -558,8 +602,54 @@ function render(closedRaw, setterRaw){
     options:{cutout:"60%",plugins:{legend:{position:"bottom",labels:{boxWidth:11,padding:12,font:{size:11}}}}}});
 }
 
-/* ================= BOOT ================= */
+/* ================= DEAL LEDGER (sortable) ================= */
+function renderDealsTable(){
+  const dir = SORT.dir==="asc" ? 1 : -1;
+  const arr = [...currentDeals].sort((a,b)=>
+    SORT.key==="cash" ? (a.cash-b.cash)*dir : ((a.date?.getTime()||0)-(b.date?.getTime()||0))*dir
+  );
+  document.querySelectorAll("#dealsTable th.sortable").forEach(th=>{
+    const on = th.dataset.sort===SORT.key;
+    th.classList.toggle("sortON", on);
+    th.querySelector(".arrow").textContent = on ? (SORT.dir==="asc"?"▲":"▼") : "";
+  });
+  const mCls=m=>m==="WHOP"?"whop":"other", sCls=s=>s==="Deposit"?"dep":"full";
+  document.querySelector("#dealsTable tbody").innerHTML = arr.length ? arr.map((d,i)=>`
+    <tr><td class="tag">${i+1}</td><td><b>${d.n}</b></td><td>${niceName(d.closer)}</td><td>${d.setter}</td>
+    <td>${d.prod}</td><td><span class="pill ${mCls(d.method)}">${d.method}</span></td>
+    <td><span class="pill ${sCls(d.status)}">${d.status}</span></td>
+    <td>${dayLabel(d.date)}</td>
+    <td style="text-align:right" class="cash">${fmt(d.cash)}</td></tr>`).join("")
+    : `<tr><td colspan="9" style="text-align:center;color:var(--muted2);padding:24px">No deals in the selected range.</td></tr>`;
+}
+
+/* ================= EVENTS ================= */
 document.getElementById("refreshBtn").addEventListener("click",()=>load(true));
+
+document.getElementById("presets").addEventListener("click",e=>{
+  const btn=e.target.closest(".chip"); if(!btn) return;
+  FILTER={preset:btn.dataset.preset, from:null, to:null};
+  document.querySelectorAll("#presets .chip").forEach(c=>c.classList.toggle("active", c===btn));
+  applyAndRender();
+});
+
+function onDateInput(){
+  FILTER={preset:"custom", from:parseInput(document.getElementById("fFrom").value), to:parseInput(document.getElementById("fTo").value)};
+  document.querySelectorAll("#presets .chip").forEach(c=>c.classList.remove("active"));
+  applyAndRender();
+}
+document.getElementById("fFrom").addEventListener("change", onDateInput);
+document.getElementById("fTo").addEventListener("change", onDateInput);
+
+document.querySelectorAll("#dealsTable th.sortable").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const key=th.dataset.sort;
+    if(SORT.key===key) SORT.dir = SORT.dir==="asc" ? "desc" : "asc";
+    else SORT={key, dir:"desc"};
+    renderDealsTable();
+  });
+});
+
 load(false);
 setInterval(()=>load(false), REFRESH_MS);
 </script>
