@@ -479,15 +479,27 @@ function renderModel(deals, sRows, range){
   document.getElementById("kpiTop").textContent=fmt(top.cash);
   document.getElementById("kpiTopSub").textContent=top.prod+", closed by "+niceName(top.closer);
 
-  /* ---- DAILY + CUMULATIVE CASH ---- */
+  /* ---- DAILY + CUMULATIVE CASH (every calendar day, zero-filled) ---- */
   const cashByDay={};
-  deals.forEach(d=>{ if(!d.date)return; const k=d.date.getTime(); cashByDay[k]=(cashByDay[k]||0)+d.cash; });
-  const dayKeys=Object.keys(cashByDay).map(Number).sort((a,b)=>a-b);
-  const dailyCash=dayKeys.map(k=>({d:dayLabel(new Date(k)), v:cashByDay[k]}));
+  deals.forEach(d=>{ if(!d.date)return; const k=startOfDay(d.date).getTime(); cashByDay[k]=(cashByDay[k]||0)+d.cash; });
+  const closingDays=Object.keys(cashByDay).length;
+  // span the full window so no day is ever skipped, even days with no sales
+  const dealDays=Object.keys(cashByDay).map(Number).sort((a,b)=>a-b);
+  let spanStart = range.from ? startOfDay(range.from) : (dealDays.length?new Date(dealDays[0]):dataBounds.min);
+  let spanEnd   = range.to   ? startOfDay(range.to)   : (dealDays.length?new Date(dealDays[dealDays.length-1]):dataBounds.max);
+  const dailyCash=[];
+  if(spanStart && spanEnd && spanStart<=spanEnd){
+    const cur=new Date(spanStart);
+    while(cur<=spanEnd){
+      const key=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()).getTime();
+      dailyCash.push({d:dayLabel(cur), v:cashByDay[key]||0});
+      cur.setDate(cur.getDate()+1);
+    }
+  }
   let cum=0; const cumData=dailyCash.map(x=>({d:x.d, v:(cum+=x.v)}));
   const bestDay = dailyCash.reduce((m,x)=>x.v>m.v?x:m,{v:0,d:""});
-  document.getElementById("cumSub").textContent="Momentum building to "+fmt(totalCash)+" across "+dailyCash.length+" closing days";
-  document.getElementById("dailySub").textContent="Best day: "+bestDay.d+" at "+fmt(bestDay.v);
+  document.getElementById("cumSub").textContent="Momentum building to "+fmt(totalCash)+" across "+closingDays+" closing days, "+dailyCash.length+" days tracked";
+  document.getElementById("dailySub").textContent= bestDay.v>0 ? "Best day: "+bestDay.d+" at "+fmt(bestDay.v)+" · every day shown, including zeros" : "No cash collected in this range";
 
   draw("cumChart",{type:"line",
     data:{labels:cumData.map(x=>x.d),datasets:[{data:cumData.map(x=>x.v),borderColor:"#e9b949",borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:"#f6cf6b",fill:true,tension:0.35,
