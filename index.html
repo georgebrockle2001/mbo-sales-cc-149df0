@@ -141,6 +141,22 @@
   th .arrow{font-size:9px;margin-left:4px;color:var(--gold2)}
   th.sortON{color:var(--gold2)}
 
+  /* commission calculator */
+  .commcard{display:flex;flex-direction:column}
+  .comm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .comm-name{font-family:'Sora';font-size:16px;font-weight:700}
+  .comm-role{display:inline-block;margin-top:6px;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:3px 9px;border-radius:999px}
+  .comm-role.setter{background:rgba(56,189,248,0.14);color:var(--sky)}
+  .comm-role.closer{background:rgba(233,185,73,0.16);color:var(--gold2)}
+  .comm-rate{display:flex;align-items:center;gap:5px;color:var(--muted);font-weight:700}
+  .comm-rate-input{width:60px;background:rgba(255,255,255,0.05);border:1px solid var(--line);border-radius:9px;color:var(--text);font-family:'Sora';font-weight:700;font-size:15px;padding:6px 8px;text-align:right}
+  .comm-rate-input:focus{outline:none;border-color:var(--gold)}
+  .comm-meta{font-size:12px;color:var(--muted);margin-top:16px;font-weight:500}
+  .comm-pay{font-family:'Sora';font-size:32px;font-weight:800;letter-spacing:-1px;color:var(--gold2);margin-top:8px;line-height:1}
+  .comm-paylab{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);font-weight:700;margin-top:7px}
+  .commcard.total{background:linear-gradient(160deg,rgba(233,185,73,0.12),var(--panel2));border-color:rgba(233,185,73,0.32)}
+  .commcard.total .comm-pay{font-size:36px}
+
   @media(max-width:1080px){
     .kpis{grid-template-columns:repeat(2,1fr)}
     .g-2,.g-2b,.g-3{grid-template-columns:1fr}
@@ -234,6 +250,10 @@
       <div class="canvas-wrap"><canvas id="prodChart" height="200"></canvas></div>
     </div>
   </div>
+
+  <!-- COMMISSION CALCULATOR -->
+  <div class="sec-title"><span class="bar"></span><h2>Commission Calculator</h2><span class="hint">Calculated on cash collected in the selected range. Rates are editable.</span></div>
+  <div class="grid g-3" id="commGrid"></div>
 
   <!-- TOP DEALS TABLE -->
   <div class="sec-title"><span class="bar"></span><h2>Deal Ledger</h2><span class="hint">Every close ranked by cash collected</span></div>
@@ -545,9 +565,10 @@ function renderModel(deals, sRows, range){
     options:{indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)}}},
       scales:{x:{grid:{color:grid},ticks:{callback:v=>fmtK(v)}},y:{grid:{display:false}}}}});
 
-  /* ---- DEALS TABLE ---- */
+  /* ---- DEALS TABLE + COMMISSIONS ---- */
   currentDeals = deals;
   renderDealsTable();
+  renderCommission();
 
   /* ---- FUNNEL ---- */
   const sum=k=>sRows.reduce((s,r)=>s+r[k],0);
@@ -614,6 +635,41 @@ function renderModel(deals, sRows, range){
     options:{cutout:"60%",plugins:{legend:{position:"bottom",labels:{boxWidth:11,padding:12,font:{size:11}}}}}});
 }
 
+/* ================= COMMISSION CALCULATOR ================= */
+const COMMISSION=[
+  {name:"Hamza",  role:"setter", rate:5},
+  {name:"Lawand", role:"closer", rate:10},
+];
+let commCash={};
+function renderCommission(){
+  commCash={};
+  COMMISSION.forEach(e=>{
+    const rel=currentDeals.filter(d=> e.role==="setter" ? d.setter===e.name : d.closer===e.name);
+    commCash[e.name]={cash:rel.reduce((s,d)=>s+d.cash,0), deals:rel.length};
+  });
+  const cards=COMMISSION.map(e=>{
+    const c=commCash[e.name], pay=c.cash*e.rate/100;
+    return `<div class="panel commcard">
+      <div class="comm-top">
+        <div><div class="comm-name">${niceName(e.name)}</div><span class="comm-role ${e.role}">${e.role}</span></div>
+        <div class="comm-rate"><input type="number" class="comm-rate-input" data-name="${e.name}" value="${e.rate}" min="0" max="100" step="0.5" /><span>%</span></div>
+      </div>
+      <div class="comm-meta">${c.deals} deals &middot; ${fmt(c.cash)} cash collected</div>
+      <div class="comm-pay" id="commPay-${e.name}">${fmt(pay)}</div>
+      <div class="comm-paylab">commission owed</div>
+    </div>`;
+  }).join("");
+  const total=COMMISSION.reduce((s,e)=>s+commCash[e.name].cash*e.rate/100,0);
+  const totalCard=`<div class="panel commcard total">
+      <div class="comm-name">Total Payout</div>
+      <span class="comm-role closer" style="visibility:hidden">x</span>
+      <div class="comm-meta">Combined across ${COMMISSION.length} team members</div>
+      <div class="comm-pay" id="commTotal">${fmt(total)}</div>
+      <div class="comm-paylab">all commissions, selected range</div>
+    </div>`;
+  document.getElementById("commGrid").innerHTML=cards+totalCard;
+}
+
 /* ================= DEAL LEDGER (sortable) ================= */
 function renderDealsTable(){
   const dir = SORT.dir==="asc" ? 1 : -1;
@@ -660,6 +716,17 @@ document.querySelectorAll("#dealsTable th.sortable").forEach(th=>{
     else SORT={key, dir:"desc"};
     renderDealsTable();
   });
+});
+
+/* live-editable commission rates (updates totals without losing input focus) */
+document.getElementById("commGrid").addEventListener("input",e=>{
+  const inp=e.target.closest(".comm-rate-input"); if(!inp) return;
+  const name=inp.dataset.name, r=parseFloat(inp.value)||0;
+  const earner=COMMISSION.find(x=>x.name===name); if(earner) earner.rate=r;
+  const payEl=document.getElementById("commPay-"+name);
+  if(payEl && commCash[name]) payEl.textContent=fmt(commCash[name].cash*r/100);
+  const total=COMMISSION.reduce((s,x)=>s+(commCash[x.name]?.cash||0)*x.rate/100,0);
+  document.getElementById("commTotal").textContent=fmt(total);
 });
 
 load(false);
