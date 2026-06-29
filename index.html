@@ -64,7 +64,7 @@
   .sec-title h2{font-family:'Sora';font-size:18px;font-weight:700;letter-spacing:-0.2px}
   .sec-title .hint{color:var(--muted2);font-size:12.5px;font-weight:500;margin-left:auto}
 
-  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
   .kpi{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--panel),var(--panel2));
     border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;box-shadow:var(--shadow)}
   .kpi::before{content:"";position:absolute;inset:0;background:radial-gradient(120px 80px at 90% -20%,var(--glow,rgba(233,185,73,0.18)),transparent 70%);pointer-events:none}
@@ -214,7 +214,8 @@
     <div class="kpi gold"><div class="klab">Cash Collected</div><div class="kval" id="kpiCash">--</div><div class="ksub" id="kpiCashSub">&nbsp;</div></div>
     <div class="kpi em"><div class="klab">Avg Deal Size</div><div class="kval" id="kpiAvg">--</div><div class="ksub">Across all closers</div></div>
     <div class="kpi sky"><div class="klab">New Conversations</div><div class="kval" id="kpiConv">--</div><div class="ksub" id="kpiConvSub">&nbsp;</div></div>
-    <div class="kpi violet"><div class="klab">Cash / Conversation</div><div class="kval" id="kpiCPC">--</div><div class="ksub">Revenue efficiency of DM pipeline</div></div>
+    <div class="kpi violet"><div class="klab">Cash / Conversation</div><div class="kval" id="kpiCPC">--</div><div class="ksub" id="kpiCPCSub">Per new DM conversation</div></div>
+    <div class="kpi violet"><div class="klab">Cash / Call</div><div class="kval" id="kpiCPCall">--</div><div class="ksub" id="kpiCPCallSub">Per booked call</div></div>
     <div class="kpi"><div class="klab">Top Deal</div><div class="kval" id="kpiTop">--</div><div class="ksub" id="kpiTopSub">&nbsp;</div></div>
   </div>
 
@@ -483,6 +484,8 @@ function renderModel(deals, sRows, range){
   const top = deals.reduce((m,d)=>d.cash>(m?.cash||0)?d:m, null) || {cash:0,prod:"",closer:""};
   const totalNewConv = sRows.reduce((s,r)=>s+r.newConv,0);
   const cashPerConv = totalNewConv? totalCash/totalNewConv : 0;
+  const totalBooked = sRows.reduce((s,r)=>s+r.booked,0);
+  const cashPerCall = totalBooked? totalCash/totalBooked : 0;
 
   /* ---- DATE WINDOW LABEL + IN-RANGE COUNT ---- */
   const wFrom = range.from || dataBounds.min, wTo = range.to || dataBounds.max;
@@ -496,6 +499,9 @@ function renderModel(deals, sRows, range){
   document.getElementById("kpiConv").textContent=totalNewConv.toLocaleString();
   document.getElementById("kpiConvSub").textContent="Setter sourced, "+sRows.length+" active days";
   document.getElementById("kpiCPC").textContent="$"+cashPerConv.toFixed(1);
+  document.getElementById("kpiCPCSub").textContent=totalNewConv.toLocaleString()+" conversations in range";
+  document.getElementById("kpiCPCall").textContent="$"+Math.round(cashPerCall).toLocaleString();
+  document.getElementById("kpiCPCallSub").textContent=totalBooked.toLocaleString()+" booked calls in range";
   document.getElementById("kpiTop").textContent=fmt(top.cash);
   document.getElementById("kpiTopSub").textContent=top.prod+", closed by "+niceName(top.closer);
 
