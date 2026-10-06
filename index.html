@@ -74,6 +74,8 @@
   .kpi .ksub b{color:var(--emerald);font-weight:700}
   .kpi.gold{--glow:rgba(233,185,73,0.22)}.kpi.gold .kval{color:var(--gold2)}
   .kpi.em .kval{color:var(--emerald)}.kpi.sky .kval{color:var(--sky)}.kpi.violet .kval{color:var(--violet)}
+  .kpi.rose{--glow:rgba(251,113,133,0.18)}.kpi.rose .kval{color:var(--rose)}
+  .kpi.amber{--glow:rgba(251,191,36,0.18)}.kpi.amber .kval{color:var(--amber)}
 
   .grid{display:grid;gap:18px}
   .g-2{grid-template-columns:1.55fr 1fr}.g-2b{grid-template-columns:1fr 1fr}.g-3{grid-template-columns:1fr 1fr 1fr}
@@ -109,7 +111,11 @@
   .pill.whop{background:rgba(167,139,250,0.14);color:var(--violet)}
   .pill.other{background:rgba(52,211,153,0.14);color:var(--emerald)}
   .pill.full{background:rgba(52,211,153,0.12);color:var(--emerald)}
+  .pill.plan{background:rgba(56,189,248,0.14);color:var(--sky)}
   .pill.dep{background:rgba(251,191,36,0.14);color:var(--amber)}
+  .rec-link{color:var(--rose);text-decoration:none;font-size:11px;margin-left:7px;font-weight:700;opacity:.85}
+  .rec-link:hover{opacity:1}
+  .owed{display:block;font-size:10.5px;color:var(--amber);font-weight:600;margin-top:2px}
   .tag{font-size:11px;color:var(--muted2)}
 
   .strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:6px}
@@ -156,6 +162,11 @@
   .comm-paylab{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted2);font-weight:700;margin-top:7px}
   .commcard.total{background:linear-gradient(160deg,rgba(233,185,73,0.12),var(--panel2));border-color:rgba(233,185,73,0.32)}
   .commcard.total .comm-pay{font-size:36px}
+  .comm-rates{display:flex;flex-direction:column;gap:7px;align-items:flex-end}
+  .comm-rates label{display:flex;align-items:center;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted2);font-weight:700}
+  .comm-breakdown{font-size:12px;color:var(--muted);margin-top:14px;font-weight:500;line-height:1.75}
+  .comm-breakdown b{color:var(--text);font-weight:700}
+  .comm-breakdown .sc{color:var(--gold2)}
 
   @media(max-width:1080px){
     .kpis{grid-template-columns:repeat(2,1fr)}
@@ -212,11 +223,17 @@
   <!-- HERO KPIS -->
   <div class="kpis">
     <div class="kpi gold"><div class="klab">Cash Collected</div><div class="kval" id="kpiCash">--</div><div class="ksub" id="kpiCashSub">&nbsp;</div></div>
-    <div class="kpi em"><div class="klab">Avg Deal Size</div><div class="kval" id="kpiAvg">--</div><div class="ksub">Across all closers</div></div>
+    <div class="kpi em"><div class="klab">Revenue Closed</div><div class="kval" id="kpiRev">--</div><div class="ksub" id="kpiRevSub">Total contract value</div></div>
+    <div class="kpi rose"><div class="klab">Outstanding</div><div class="kval" id="kpiOut">--</div><div class="ksub" id="kpiOutSub">Still to collect</div></div>
+    <div class="kpi sky"><div class="klab">Collection Rate</div><div class="kval" id="kpiColl">--</div><div class="ksub" id="kpiCollSub">Cash vs revenue closed</div></div>
+    <div class="kpi em"><div class="klab">Avg Deal Size</div><div class="kval" id="kpiAvg">--</div><div class="ksub" id="kpiAvgSub">Across all closers</div></div>
+    <div class="kpi gold"><div class="klab">Top Deal</div><div class="kval" id="kpiTop">--</div><div class="ksub" id="kpiTopSub">&nbsp;</div></div>
+    <div class="kpi"><div class="klab">Deals Closed</div><div class="kval" id="kpiDeals">--</div><div class="ksub" id="kpiDealsSub">In selected range</div></div>
     <div class="kpi sky"><div class="klab">New Conversations</div><div class="kval" id="kpiConv">--</div><div class="ksub" id="kpiConvSub">&nbsp;</div></div>
     <div class="kpi violet"><div class="klab">Cash / Conversation</div><div class="kval" id="kpiCPC">--</div><div class="ksub" id="kpiCPCSub">Per new DM conversation</div></div>
+    <div class="kpi amber"><div class="klab">Booked Calls</div><div class="kval" id="kpiBooked">--</div><div class="ksub" id="kpiBookedSub">Logged by setter</div></div>
     <div class="kpi violet"><div class="klab">Cash / Call</div><div class="kval" id="kpiCPCall">--</div><div class="ksub" id="kpiCPCallSub">Per booked call</div></div>
-    <div class="kpi"><div class="klab">Top Deal</div><div class="kval" id="kpiTop">--</div><div class="ksub" id="kpiTopSub">&nbsp;</div></div>
+    <div class="kpi em"><div class="klab">Close Rate</div><div class="kval" id="kpiCloseRate">--</div><div class="ksub" id="kpiCloseRateSub">Deals ÷ booked calls</div></div>
   </div>
 
   <!-- CASH OVER TIME -->
@@ -252,6 +269,31 @@
     </div>
   </div>
 
+  <!-- COLLECTIONS + SELF-CLOSE SPLIT -->
+  <div class="sec-title"><span class="bar"></span><h2>Collections &amp; Cash Flow</h2><span class="hint">What's been collected, what's still owed, and who closes it</span></div>
+  <div class="grid g-2b">
+    <div class="panel">
+      <h3>Collected vs Outstanding</h3><div class="psub">Cash in the door against total revenue closed</div>
+      <div class="canvas-wrap"><canvas id="collChart" height="190"></canvas></div>
+      <div class="strip">
+        <div class="ministat"><div class="m-val" style="color:var(--emerald)" id="msRev">--</div><div class="m-lab">Revenue closed</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--gold2)" id="msColl">--</div><div class="m-lab">Cash collected</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--rose)" id="msOut">--</div><div class="m-lab">Outstanding</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--sky)" id="msPlans">--</div><div class="m-lab">Payment plans / deposits</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Self-Close vs Closer-Assisted</h3><div class="psub">Cash Hamza closes in DMs vs handed to a closer</div>
+      <div class="canvas-wrap"><canvas id="splitChart" height="190"></canvas></div>
+      <div class="strip">
+        <div class="ministat"><div class="m-val" style="color:var(--violet)" id="msDmsCash">--</div><div class="m-lab">Cash closed in DMs</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--gold2)" id="msCloserCash">--</div><div class="m-lab">Cash with closer</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--violet)" id="msDmsDeals">--</div><div class="m-lab">Deals in DMs</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--gold2)" id="msCloserDeals">--</div><div class="m-lab">Deals with closer</div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- COMMISSION CALCULATOR -->
   <div class="sec-title"><span class="bar"></span><h2>Commission Calculator</h2><span class="hint">Calculated on cash collected in the selected range. Rates are editable.</span></div>
   <div class="grid g-3" id="commGrid"></div>
@@ -260,7 +302,7 @@
   <div class="sec-title"><span class="bar"></span><h2>Deal Ledger</h2><span class="hint">Every close ranked by cash collected</span></div>
   <div class="panel">
     <table id="dealsTable">
-      <thead><tr><th>#</th><th>Prospect</th><th>Closer</th><th>Setter</th><th>Product</th><th>Method</th><th>Status</th><th class="sortable" data-sort="date">Date <span class="arrow"></span></th><th class="sortable" style="text-align:right" data-sort="cash">Cash <span class="arrow"></span></th></tr></thead>
+      <thead><tr><th>#</th><th>Prospect</th><th>Closer</th><th>Setter</th><th>Product</th><th>Method</th><th>Status</th><th class="sortable" data-sort="date">Date <span class="arrow"></span></th><th style="text-align:right">Revenue</th><th class="sortable" style="text-align:right" data-sort="cash">Cash <span class="arrow"></span></th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -272,10 +314,10 @@
       <h3>Conversion Funnel</h3><div class="psub">From new conversation to closed deal across the reporting window</div>
       <div class="funnel" id="funnel"></div>
       <div class="strip">
-        <div class="ministat"><div class="m-val" style="color:var(--sky)" id="msConv">--</div><div class="m-lab">New conversations</div></div>
-        <div class="ministat"><div class="m-val" style="color:var(--violet)" id="msPitch">--</div><div class="m-lab">Course pitches</div></div>
-        <div class="ministat"><div class="m-val" style="color:var(--amber)" id="msBooked">--</div><div class="m-lab">Calls booked</div></div>
-        <div class="ministat"><div class="m-val" style="color:var(--emerald)" id="msClosed">--</div><div class="m-lab">Setter logged closes</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--violet)" id="msPitchRate">--</div><div class="m-lab">Pitch rate (course ÷ convos)</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--amber)" id="msBookRate">--</div><div class="m-lab">Booking rate (booked ÷ pitched)</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--sky)" id="msShowRate">--</div><div class="m-lab">Show rate (shown ÷ booked)</div></div>
+        <div class="ministat"><div class="m-val" style="color:var(--emerald)" id="msDmClose">--</div><div class="m-lab">Setter logged closes</div></div>
       </div>
     </div>
     <div class="panel">
@@ -359,16 +401,22 @@ const dayLabel = dt => dt ? String(dt.getDate()).padStart(2,"0")+" "+MONTHS[dt.g
 /* product / closer normalisation */
 function normProduct(p){
   const s=p.toLowerCase();
-  if(s.includes("processor")||s.includes("proccesor")) return "Payment Processor";
+  if(s.includes("mastermind")) return "Mastermind";
+  if(s.includes("processor")||s.includes("proccesor")||/\bpp\b/.test(s)) return "Payment Processor";
   if(s.includes("mrr")) return "MRR Course";
-  if(s.includes("1-1")||s.includes("1 1")) return "1-1 Mentorship";
-  if(s.includes("course")) return "Course";
-  if(s.includes("group")) return "Group Mentorship";
-  if(s.includes("mentorship")) return "1-1 Mentorship";
-  return p || "Other";
+  if(s.includes("group")||s.includes("coaching")) return "Group Mentorship";
+  if(s.includes("1-1")||s.includes("1 1")||s.includes("1 on 1")||s.includes("mentorship")) return "1-1 Mentorship";
+  if(s.includes("course")||s.includes("copurse")||s.includes("discord")||s.includes("whop")) return "Course";
+  return p ? "Other" : "Unspecified";
 }
 const niceName = n => n==="No Closer" ? "Inbound Self-Close" : (n||"Unattributed");
-const payBucket = m => /whop/i.test(m) ? "WHOP" : (m.trim()? "Other" : "Other");
+const payBucket = m => /whop/i.test(m) ? "WHOP" : "Other";
+function statusBucket(s){
+  const t=String(s).toLowerCase();
+  if(t.includes("deposit")) return "Deposit";
+  if(t.includes("plan")) return "Payment Plan";
+  return "Paid in full";
+}
 function objBucket(o){
   const s=o.toLowerCase();
   if(s.includes("fund")) return "No funds";
@@ -434,10 +482,16 @@ function resolveRange(){
 function buildModel(){
   const deals=RAW.closedRaw
     .filter(r=>(r["Prospect name"]||"").trim()!=="" && num(r["Cash Collected amount (USD)"])>0)
-    .map(r=>({date:parseDMY(r["Timestamp"]), n:r["Prospect name"], closer:(r["Closer"]||"").trim()||"No Closer", setter:(r["Setter"]||"").trim()||"-", prod:normProduct(r["Product or package sold"]||""), method:payBucket(r["Payment method"]||""), status:/deposit/i.test(r["Payment status"]||"")?"Deposit":"Paid in full", cash:num(r["Cash Collected amount (USD)"])}));
+    .map(r=>{
+      const cash=num(r["Cash Collected amount (USD)"]);
+      const revRaw=num(r["Revenue Closed amount (USD)"]);
+      const rev=revRaw>0?revRaw:cash;                // blank revenue = fully collected
+      const fathom=(r["Fathom call recording link"]||"").trim();
+      return {date:parseDMY(r["Timestamp"]), n:r["Prospect name"], closer:(r["Closer"]||"").trim()||"No Closer", setter:(r["Setter"]||"").trim()||"-", prod:normProduct(r["Product or package sold"]||""), method:payBucket(r["Payment method"]||""), status:statusBucket(r["Payment status"]||""), cash, rev, outstanding:Math.max(0,rev-cash), fathom:/^https?:\/\//i.test(fathom)?fathom:""};
+    });
   const sRows=RAW.setterRaw
     .filter(r=>(r["Name"]||"").trim()!=="")
-    .map(r=>({date:parseDMY(r["Timestamp"]), newConv:num(r["New Conversations today"]), pitchCourse:num(r["Pitched Course"]), pitchCalls:num(r["Pitched Calls"]), booked:num(r["Booked Calls"]), dmsDeals:num(r["Deals Closed in DMS"]), closerDeals:num(r["Deals closed (With Closer)"]), quality:numOrNull(r["Quality of Leads"]), interest:numOrNull(r["How interested are leads"]), objection:r["Common objection"]||"", source:r["Where did majority of leads come from?"]||""}))
+    .map(r=>({date:parseDMY(r["Timestamp"]), newConv:num(r["New Conversations today"]), convTotal:num(r["Conversations Total"]), pitchCourse:num(r["Pitched Course"]), pitchCalls:num(r["Pitched Calls"]), booked:num(r["Booked Calls"]), bookedToday:num(r["Calls Booked for Today"]), shown:num(r["Calls Shown for Today"]), dmsDeals:num(r["Deals Closed in DMS"]), dmsCash:num(r["Cash Collected in DMS"]), closerCash:num(r["Cash collected (With Closer)"]), closerDeals:num(r["Deals closed (With Closer)"]), quality:numOrNull(r["Quality of Leads"]), interest:numOrNull(r["How interested are leads"]), objection:r["Common objection"]||"", source:r["Where did majority of leads come from?"]||""}))
     .sort((a,b)=>(a.date?.getTime()||0)-(b.date?.getTime()||0));
   return {deals,sRows};
 }
@@ -479,6 +533,10 @@ async function load(manual){
 
 function renderModel(deals, sRows, range){
   const totalCash = deals.reduce((s,d)=>s+d.cash,0);
+  const totalRev  = deals.reduce((s,d)=>s+d.rev,0);
+  const totalOut  = deals.reduce((s,d)=>s+d.outstanding,0);
+  const collRate  = totalRev? totalCash/totalRev*100 : 0;
+  const planCount = deals.filter(d=>d.status!=="Paid in full").length;
   const dealCount = deals.length;
   const avgDeal = dealCount? totalCash/dealCount : 0;
   const top = deals.reduce((m,d)=>d.cash>(m?.cash||0)?d:m, null) || {cash:0,prod:"",closer:""};
@@ -486,6 +544,7 @@ function renderModel(deals, sRows, range){
   const cashPerConv = totalNewConv? totalCash/totalNewConv : 0;
   const totalBooked = sRows.reduce((s,r)=>s+r.booked,0);
   const cashPerCall = totalBooked? totalCash/totalBooked : 0;
+  const closeRate = totalBooked? dealCount/totalBooked*100 : 0;
 
   /* ---- DATE WINDOW LABEL + IN-RANGE COUNT ---- */
   const wFrom = range.from || dataBounds.min, wTo = range.to || dataBounds.max;
@@ -494,14 +553,27 @@ function renderModel(deals, sRows, range){
 
   /* ---- KPIs ---- */
   document.getElementById("kpiCash").textContent=fmt(totalCash);
-  document.getElementById("kpiCashSub").innerHTML="<b>"+dealCount+"</b> closed deals to date";
+  document.getElementById("kpiCashSub").innerHTML="<b>"+dealCount+"</b> closed deals in range";
+  document.getElementById("kpiRev").textContent=fmt(totalRev);
+  document.getElementById("kpiRevSub").textContent="Total contract value booked";
+  document.getElementById("kpiOut").textContent=fmt(totalOut);
+  document.getElementById("kpiOutSub").textContent=totalOut>0? planCount+" deals carrying a balance" : "Everything collected";
+  document.getElementById("kpiColl").textContent=collRate.toFixed(1)+"%";
+  document.getElementById("kpiCollSub").textContent="Cash in vs revenue closed";
   document.getElementById("kpiAvg").textContent=fmt(avgDeal);
+  document.getElementById("kpiAvgSub").textContent="Across "+dealCount+" deals";
+  document.getElementById("kpiDeals").textContent=dealCount.toLocaleString();
+  document.getElementById("kpiDealsSub").textContent=planCount+" on plans / deposits";
   document.getElementById("kpiConv").textContent=totalNewConv.toLocaleString();
   document.getElementById("kpiConvSub").textContent="Setter sourced, "+sRows.length+" active days";
   document.getElementById("kpiCPC").textContent="$"+cashPerConv.toFixed(1);
   document.getElementById("kpiCPCSub").textContent=totalNewConv.toLocaleString()+" conversations in range";
+  document.getElementById("kpiBooked").textContent=totalBooked.toLocaleString();
+  document.getElementById("kpiBookedSub").textContent="Calls booked by setter";
   document.getElementById("kpiCPCall").textContent="$"+Math.round(cashPerCall).toLocaleString();
   document.getElementById("kpiCPCallSub").textContent=totalBooked.toLocaleString()+" booked calls in range";
+  document.getElementById("kpiCloseRate").textContent=closeRate.toFixed(1)+"%";
+  document.getElementById("kpiCloseRateSub").textContent=dealCount+" deals ÷ "+totalBooked+" booked";
   document.getElementById("kpiTop").textContent=fmt(top.cash);
   document.getElementById("kpiTopSub").textContent=top.prod+", closed by "+niceName(top.closer);
 
@@ -524,7 +596,15 @@ function renderModel(deals, sRows, range){
   }
   let cum=0; const cumData=dailyCash.map(x=>({d:x.d, v:(cum+=x.v)}));
   const bestDay = dailyCash.reduce((m,x)=>x.v>m.v?x:m,{v:0,d:""});
-  document.getElementById("cumSub").textContent="Momentum building to "+fmt(totalCash)+" across "+closingDays+" closing days, "+dailyCash.length+" days tracked";
+  const pacePerDay = dailyCash.length ? totalCash/dailyCash.length : 0;
+  // only project to month-end when the whole window sits inside the live (current) month
+  const now0=new Date(), inThisMonth=d=>d&&d.getMonth()===now0.getMonth()&&d.getFullYear()===now0.getFullYear();
+  let projTxt="";
+  if(spanStart && spanEnd && inThisMonth(spanStart) && inThisMonth(spanEnd) && pacePerDay>0){
+    const dim=new Date(now0.getFullYear(),now0.getMonth()+1,0).getDate();
+    projTxt=" · on pace for ~"+fmt(pacePerDay*dim)+" month-end";
+  }
+  document.getElementById("cumSub").textContent="Building to "+fmt(totalCash)+" over "+closingDays+" closing days · "+fmt(pacePerDay)+"/day"+projTxt;
   document.getElementById("dailySub").textContent= bestDay.v>0 ? "Best day: "+bestDay.d+" at "+fmt(bestDay.v)+" · every day shown, including zeros" : "No cash collected in this range";
 
   draw("cumChart",{type:"line",
@@ -571,6 +651,26 @@ function renderModel(deals, sRows, range){
     options:{indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.x)}}},
       scales:{x:{grid:{color:grid},ticks:{callback:v=>fmtK(v)}},y:{grid:{display:false}}}}});
 
+  /* ---- COLLECTIONS: collected vs outstanding ---- */
+  draw("collChart",{type:"doughnut",
+    data:{labels:["Collected","Outstanding"],datasets:[{data:[totalCash,totalOut],backgroundColor:["#e9b949","#fb7185"],borderColor:"#0e1522",borderWidth:3,hoverOffset:6}]},
+    options:{cutout:"66%",plugins:{legend:{position:"bottom",labels:{boxWidth:11,padding:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+" "+fmt(c.parsed)}}}}});
+  document.getElementById("msRev").textContent=fmt(totalRev);
+  document.getElementById("msColl").textContent=fmt(totalCash);
+  document.getElementById("msOut").textContent=fmt(totalOut);
+  document.getElementById("msPlans").textContent=planCount.toLocaleString();
+
+  /* ---- SELF-CLOSE vs CLOSER-ASSISTED (from setter EOD logs) ---- */
+  const dmsCash=sRows.reduce((s,r)=>s+r.dmsCash,0), closerCash=sRows.reduce((s,r)=>s+r.closerCash,0);
+  const dmsDeals=sRows.reduce((s,r)=>s+r.dmsDeals,0), closerDeals=sRows.reduce((s,r)=>s+r.closerDeals,0);
+  draw("splitChart",{type:"doughnut",
+    data:{labels:["Closed in DMs","With closer"],datasets:[{data:[dmsCash,closerCash],backgroundColor:["#a78bfa","#e9b949"],borderColor:"#0e1522",borderWidth:3,hoverOffset:6}]},
+    options:{cutout:"66%",plugins:{legend:{position:"bottom",labels:{boxWidth:11,padding:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+" "+fmt(c.parsed)}}}}});
+  document.getElementById("msDmsCash").textContent=fmt(dmsCash);
+  document.getElementById("msCloserCash").textContent=fmt(closerCash);
+  document.getElementById("msDmsDeals").textContent=dmsDeals.toLocaleString();
+  document.getElementById("msCloserDeals").textContent=closerDeals.toLocaleString();
+
   /* ---- DEALS TABLE + COMMISSIONS ---- */
   currentDeals = deals;
   renderDealsTable();
@@ -594,10 +694,12 @@ function renderModel(deals, sRows, range){
     return `<div class="fstage" style="width:${w}%;background:linear-gradient(90deg,${s.color},${s.color}cc)">
       <span class="fname">${s.name}</span><span class="fval">${s.val.toLocaleString()}</span>${rate?`<span class="frate">${rate}</span>`:""}</div>`;
   }).join("");
-  document.getElementById("msConv").textContent=fNew.toLocaleString();
-  document.getElementById("msPitch").textContent=fCourse.toLocaleString();
-  document.getElementById("msBooked").textContent=fBooked.toLocaleString();
-  document.getElementById("msClosed").textContent=fClosed.toLocaleString();
+  const fShown=sum("shown"), fBookedToday=sum("bookedToday");
+  const pct=(a,b)=>b? (a/b*100).toFixed(1)+"%" : "--";
+  document.getElementById("msPitchRate").textContent=pct(fCourse,fNew);
+  document.getElementById("msBookRate").textContent=pct(fBooked,fCalls);
+  document.getElementById("msShowRate").textContent=pct(fShown,fBookedToday);
+  document.getElementById("msDmClose").textContent=fClosed.toLocaleString();
 
   /* ---- CONVERSATIONS ---- */
   const convDays=sRows.filter(r=>r.date);
@@ -642,34 +744,54 @@ function renderModel(deals, sRows, range){
 }
 
 /* ================= COMMISSION CALCULATOR ================= */
+/* Setters earn `rate` on deals they set, but a higher `selfCloseRate` on deals
+   they also closed themselves (closer === "No Closer"). Closers earn `rate`. */
 const COMMISSION=[
-  {name:"Hamza",  role:"setter", rate:5},
+  {name:"Hamza",  role:"setter", rate:5, selfCloseRate:7.5},
   {name:"Lawand", role:"closer", rate:10},
 ];
 let commCash={};
+const commSelfRate=e=> e.selfCloseRate!=null ? e.selfCloseRate : e.rate;
+const commPayOf=(e)=>{const c=commCash[e.name]; return c? c.stdCash*e.rate/100 + c.selfCash*commSelfRate(e)/100 : 0;};
 function renderCommission(){
   commCash={};
   COMMISSION.forEach(e=>{
-    const rel=currentDeals.filter(d=> e.role==="setter" ? d.setter===e.name : d.closer===e.name);
-    commCash[e.name]={cash:rel.reduce((s,d)=>s+d.cash,0), deals:rel.length};
+    if(e.role==="setter"){
+      const mine=currentDeals.filter(d=>d.setter===e.name);
+      const self=mine.filter(d=>d.closer==="No Closer");
+      const std =mine.filter(d=>d.closer!=="No Closer");
+      commCash[e.name]={stdCash:std.reduce((s,d)=>s+d.cash,0), stdDeals:std.length, selfCash:self.reduce((s,d)=>s+d.cash,0), selfDeals:self.length};
+    }else{
+      const mine=currentDeals.filter(d=>d.closer===e.name);
+      commCash[e.name]={stdCash:mine.reduce((s,d)=>s+d.cash,0), stdDeals:mine.length, selfCash:0, selfDeals:0};
+    }
   });
   const cards=COMMISSION.map(e=>{
-    const c=commCash[e.name], pay=c.cash*e.rate/100;
+    const c=commCash[e.name], pay=commPayOf(e);
+    const hasSelf = e.role==="setter" && e.selfCloseRate!=null;
+    const stdLabel = e.role==="setter" ? "Setter" : "Closer";
+    const breakdown = hasSelf
+      ? `<span><b>${c.stdDeals}</b> standard set &middot; ${fmt(c.stdCash)}</span><br><span class="sc"><b>${c.selfDeals}</b> self-closed &middot; ${fmt(c.selfCash)}</span>`
+      : `<span><b>${c.stdDeals}</b> deals &middot; ${fmt(c.stdCash)} cash collected</span>`;
+    const rates = `<div class="comm-rates">
+        <label>${stdLabel} <input type="number" class="comm-rate-input" data-name="${e.name}" data-kind="rate" value="${e.rate}" min="0" max="100" step="0.5" /><span>%</span></label>
+        ${hasSelf?`<label>Self-close <input type="number" class="comm-rate-input" data-name="${e.name}" data-kind="self" value="${e.selfCloseRate}" min="0" max="100" step="0.5" /><span>%</span></label>`:""}
+      </div>`;
     return `<div class="panel commcard">
       <div class="comm-top">
         <div><div class="comm-name">${niceName(e.name)}</div><span class="comm-role ${e.role}">${e.role}</span></div>
-        <div class="comm-rate"><input type="number" class="comm-rate-input" data-name="${e.name}" value="${e.rate}" min="0" max="100" step="0.5" /><span>%</span></div>
+        ${rates}
       </div>
-      <div class="comm-meta">${c.deals} deals &middot; ${fmt(c.cash)} cash collected</div>
+      <div class="comm-breakdown">${breakdown}</div>
       <div class="comm-pay" id="commPay-${e.name}">${fmt(pay)}</div>
       <div class="comm-paylab">commission owed</div>
     </div>`;
   }).join("");
-  const total=COMMISSION.reduce((s,e)=>s+commCash[e.name].cash*e.rate/100,0);
+  const total=COMMISSION.reduce((s,e)=>s+commPayOf(e),0);
   const totalCard=`<div class="panel commcard total">
       <div class="comm-name">Total Payout</div>
       <span class="comm-role closer" style="visibility:hidden">x</span>
-      <div class="comm-meta">Combined across ${COMMISSION.length} team members</div>
+      <div class="comm-breakdown">Combined across ${COMMISSION.length} team members</div>
       <div class="comm-pay" id="commTotal">${fmt(total)}</div>
       <div class="comm-paylab">all commissions, selected range</div>
     </div>`;
@@ -687,14 +809,18 @@ function renderDealsTable(){
     th.classList.toggle("sortON", on);
     th.querySelector(".arrow").textContent = on ? (SORT.dir==="asc"?"▲":"▼") : "";
   });
-  const mCls=m=>m==="WHOP"?"whop":"other", sCls=s=>s==="Deposit"?"dep":"full";
+  const mCls=m=>m==="WHOP"?"whop":"other";
+  const sCls=s=>s==="Deposit"?"dep":s==="Payment Plan"?"plan":"full";
   document.querySelector("#dealsTable tbody").innerHTML = arr.length ? arr.map((d,i)=>`
-    <tr><td class="tag">${i+1}</td><td><b>${d.n}</b></td><td>${niceName(d.closer)}</td><td>${d.setter}</td>
+    <tr><td class="tag">${i+1}</td>
+    <td><b>${d.n}</b>${d.fathom?`<a class="rec-link" href="${d.fathom}" target="_blank" rel="noopener" title="Call recording">▶ rec</a>`:""}</td>
+    <td>${niceName(d.closer)}</td><td>${d.setter}</td>
     <td>${d.prod}</td><td><span class="pill ${mCls(d.method)}">${d.method}</span></td>
     <td><span class="pill ${sCls(d.status)}">${d.status}</span></td>
     <td>${dayLabel(d.date)}</td>
-    <td style="text-align:right" class="cash">${fmt(d.cash)}</td></tr>`).join("")
-    : `<tr><td colspan="9" style="text-align:center;color:var(--muted2);padding:24px">No deals in the selected range.</td></tr>`;
+    <td style="text-align:right">${d.rev>d.cash?fmt(d.rev):'<span class="tag">—</span>'}</td>
+    <td style="text-align:right" class="cash">${fmt(d.cash)}${d.outstanding>0?`<span class="owed">${fmt(d.outstanding)} owed</span>`:""}</td></tr>`).join("")
+    : `<tr><td colspan="10" style="text-align:center;color:var(--muted2);padding:24px">No deals in the selected range.</td></tr>`;
 }
 
 /* ================= EVENTS ================= */
@@ -727,12 +853,12 @@ document.querySelectorAll("#dealsTable th.sortable").forEach(th=>{
 /* live-editable commission rates (updates totals without losing input focus) */
 document.getElementById("commGrid").addEventListener("input",e=>{
   const inp=e.target.closest(".comm-rate-input"); if(!inp) return;
-  const name=inp.dataset.name, r=parseFloat(inp.value)||0;
-  const earner=COMMISSION.find(x=>x.name===name); if(earner) earner.rate=r;
+  const name=inp.dataset.name, kind=inp.dataset.kind, r=parseFloat(inp.value)||0;
+  const earner=COMMISSION.find(x=>x.name===name); if(!earner) return;
+  if(kind==="self") earner.selfCloseRate=r; else earner.rate=r;
   const payEl=document.getElementById("commPay-"+name);
-  if(payEl && commCash[name]) payEl.textContent=fmt(commCash[name].cash*r/100);
-  const total=COMMISSION.reduce((s,x)=>s+(commCash[x.name]?.cash||0)*x.rate/100,0);
-  document.getElementById("commTotal").textContent=fmt(total);
+  if(payEl) payEl.textContent=fmt(commPayOf(earner));
+  document.getElementById("commTotal").textContent=fmt(COMMISSION.reduce((s,x)=>s+commPayOf(x),0));
 });
 
 load(false);
