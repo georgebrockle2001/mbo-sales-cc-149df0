@@ -283,7 +283,7 @@
       </div>
     </div>
     <div class="panel">
-      <h3>Self-Close vs Closer-Assisted</h3><div class="psub">Cash Hamza closes in DMs vs handed to a closer</div>
+      <h3>Self-Close vs Closer-Assisted</h3><div class="psub">Cash closed in DMs (no closer) vs closed with a closer</div>
       <div class="canvas-wrap"><canvas id="splitChart" height="190"></canvas></div>
       <div class="strip">
         <div class="ministat"><div class="m-val" style="color:var(--violet)" id="msDmsCash">--</div><div class="m-lab">Cash closed in DMs</div></div>
@@ -660,9 +660,9 @@ function renderModel(deals, sRows, range){
   document.getElementById("msOut").textContent=fmt(totalOut);
   document.getElementById("msPlans").textContent=planCount.toLocaleString();
 
-  /* ---- SELF-CLOSE vs CLOSER-ASSISTED (from setter EOD logs) ---- */
-  const dmsCash=sRows.reduce((s,r)=>s+r.dmsCash,0), closerCash=sRows.reduce((s,r)=>s+r.closerCash,0);
-  const dmsDeals=sRows.reduce((s,r)=>s+r.dmsDeals,0), closerDeals=sRows.reduce((s,r)=>s+r.closerDeals,0);
+  /* ---- SELF-CLOSE vs CLOSER-ASSISTED (from closed deals, source of truth) ---- */
+  let dmsCash=0,closerCash=0,dmsDeals=0,closerDeals=0;
+  deals.forEach(d=>{ if(d.closer==="No Closer"){dmsCash+=d.cash;dmsDeals++;} else {closerCash+=d.cash;closerDeals++;} });
   draw("splitChart",{type:"doughnut",
     data:{labels:["Closed in DMs","With closer"],datasets:[{data:[dmsCash,closerCash],backgroundColor:["#a78bfa","#e9b949"],borderColor:"#0e1522",borderWidth:3,hoverOffset:6}]},
     options:{cutout:"66%",plugins:{legend:{position:"bottom",labels:{boxWidth:11,padding:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.label+" "+fmt(c.parsed)}}}}});
